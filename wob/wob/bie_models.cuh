@@ -82,9 +82,9 @@ class BIEModelBase {
     ) const {
         if (num_volume_samples == 0) return utils::zero<ValueType>();
 
-        auto [volume_sample_point, inv_pdf] = volume_sample_sampler();
         ValueType result = utils::zero<ValueType>();
         for (unsigned int i = 0; i < num_volume_samples; i++) {
+            auto [volume_sample_point, inv_pdf] = volume_sample_sampler();
             if (boundary_point.boundary_type == Dirichlet) {
                 result +=
                     equation_kernel.G(boundary_point.p, volume_sample_point.p) * volume_sample_point.value * inv_pdf;
@@ -108,9 +108,9 @@ class BIEModelBase {
     ) const {
         if (num_volume_samples == 0) return utils::zero<ValueType>();
 
-        auto [volume_sample_point, inv_pdf] = volume_sample_sampler();
         ValueType result = utils::zero<ValueType>();
         for (unsigned int i = 0; i < num_volume_samples; i++) {
+            auto [volume_sample_point, inv_pdf] = volume_sample_sampler();
             result -= equation_kernel.G(boundary_point.p, volume_sample_point.p) * volume_sample_point.value * inv_pdf;
         }
 
@@ -124,9 +124,9 @@ class BIEModelBase {
     ) const {
         if (num_volume_samples == 0) return utils::zero<ValueType>();
 
-        auto [volume_sample_point, inv_pdf] = volume_sample_sampler();
         ValueType result = utils::zero<ValueType>();
         for (unsigned int i = 0; i < num_volume_samples; i++) {
+            auto [volume_sample_point, inv_pdf] = volume_sample_sampler();
             result -= equation_kernel.G(volume_sample_point.p, domain_point.p) * volume_sample_point.value * inv_pdf;
         }
 
@@ -141,10 +141,9 @@ class BIEModelBase {
         using ResultType = Eigen::Matrix<ScalarType, Dim, is_vector_problem<equationKernel>() ? Dim : 1>;
         if (num_volume_samples == 0) return utils::zero<ResultType>();
 
-        auto [volume_sample_point, inv_pdf] = volume_sample_sampler();
-
         ResultType result = ResultType::Zero();
         for (unsigned int i = 0; i < num_volume_samples; i++) {
+            auto [volume_sample_point, inv_pdf] = volume_sample_sampler();
             result -=
                 equation_kernel.dG_dx(volume_sample_point.p, domain_point.p) * volume_sample_point.value * inv_pdf;
         }
