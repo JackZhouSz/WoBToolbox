@@ -16,8 +16,8 @@
 
 #include <Eigen/Dense>
 #include <cmath>
+#include <cuda/std/optional>
 #include <iostream>
-#include <thrust/optional.h>
 #include <thrust/pair.h>
 
 #include "lbvh.cuh"
@@ -93,7 +93,8 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorCache> struct Volu
             p[i] += (unif - 0.5f) * domain_size / grid_res;
         }
         DomainSamplePoint<ScalarType, Dim, typename value_type<ScalarType, Dim, IsVectorCache>::type> result_point{
-            p, cache[idx]};
+            p, cache[idx]
+        };
         return {result_point, int_pow<Dim>(domain_size)};
     }
 
@@ -102,7 +103,8 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorCache> struct Volu
     sample_volme_cache_cache_value_sampling(wob::randomState_t *random_state_ptr) const {
         if (cdf == nullptr)
             return {
-                DomainSamplePoint<ScalarType, Dim, typename value_type<ScalarType, Dim, IsVectorCache>::type>(), 0.0f};
+                DomainSamplePoint<ScalarType, Dim, typename value_type<ScalarType, Dim, IsVectorCache>::type>(), 0.0f
+            };
 
         ScalarType unif = utils::rand_uniform<ScalarType>(random_state_ptr);
         unsigned int idx = binary_search(cdf, int_pow<Dim>(grid_res), unif);
@@ -113,7 +115,8 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorCache> struct Volu
             p[i] += (unif - 0.5f) * domain_size / grid_res;
         }
         DomainSamplePoint<ScalarType, Dim, typename value_type<ScalarType, Dim, IsVectorCache>::type> result_point{
-            p, cache[idx]};
+            p, cache[idx]
+        };
 
         ScalarType pdf = idx == 0 ? cdf[idx] : cdf[idx] - cdf[idx - 1];
         return {result_point, int_pow<Dim>(domain_size / grid_res) / pdf};
@@ -127,7 +130,7 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorCache> struct Volu
         Eigen::Matrix<ScalarType, Dim, 1> idx = utils::domain_point_to_idx<ScalarType, Dim>(p, grid_res, domain_size);
         Eigen::Matrix<int, Dim, 1> int_idx = idx.array().round().matrix().template cast<int>();
         if (wrap_mode == Repeat)
-            int_idx = int_idx.unaryExpr([=](const int x) { return x % (int)grid_res; });
+            int_idx = int_idx.unaryExpr([this](const int x) { return x % (int)grid_res; });
         else if (wrap_mode == ClampToEdge)
             int_idx = int_idx.array().max(0).min(grid_res - 1).matrix();
         else if (wrap_mode == ClampToBorder) {
@@ -149,7 +152,7 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorCache> struct Volu
                 for (int j = 0; j < 2; j++) {
                     Eigen::Matrix<int, Dim, 1> int_idx = floor_idx + Eigen::Matrix<int, Dim, 1>(i, j);
                     if (wrap_mode == Repeat)
-                        int_idx = int_idx.unaryExpr([=](const int x) { return x % (int)grid_res; });
+                        int_idx = int_idx.unaryExpr([this](const int x) { return x % (int)grid_res; });
                     else if (wrap_mode == ClampToEdge)
                         int_idx = int_idx.array().max(0).min(grid_res - 1).matrix();
                     else if (wrap_mode == ClampToBorder) {
@@ -174,7 +177,7 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorCache> struct Volu
                     for (int k = 0; k < 2; k++) {
                         Eigen::Matrix<int, Dim, 1> int_idx = floor_idx + Eigen::Matrix<int, Dim, 1>(i, j, k);
                         if (wrap_mode == Repeat)
-                            int_idx = int_idx.unaryExpr([=](const int x) { return x % (int)grid_res; });
+                            int_idx = int_idx.unaryExpr([this](const int x) { return x % (int)grid_res; });
                         else if (wrap_mode == ClampToEdge)
                             int_idx = int_idx.array().max(0).min(grid_res - 1).matrix();
                         else if (wrap_mode == ClampToBorder) {
@@ -313,8 +316,9 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorProblem> struct Sc
             boundary_value_cdf.data().get(),
             total_boundary_value,
             volume_cache
-                ? thrust::optional<VolumeCache<ScalarType, Dim, IsVectorProblem>>(volume_cache->get_device_repr())
-                : thrust::nullopt};
+                ? cuda::std::optional<VolumeCache<ScalarType, Dim, IsVectorProblem>>(volume_cache->get_device_repr())
+                : cuda::std::nullopt
+        };
     }
 
     lbvh::bvh<
@@ -322,7 +326,7 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorProblem> struct Sc
         bvh;
     thrust::device_vector<ScalarType> area_cdf, boundary_value_cdf;
     ScalarType total_boundary_area, total_boundary_value;
-    thrust::optional<VolumeCacheHost<ScalarType, Dim, IsVectorProblem>> volume_cache;
+    cuda::std::optional<VolumeCacheHost<ScalarType, Dim, IsVectorProblem>> volume_cache;
 };
 
 template <typename ScalarType, unsigned int Dim, bool IsVectorProblem> class Scene {
@@ -372,7 +376,7 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorProblem> class Sce
     ScalarType total_boundary_area;
     ScalarType *boundary_value_cdf;
     ScalarType total_boundary_value;
-    thrust::optional<VolumeCache<ScalarType, Dim, IsVectorProblem>> volume_cache;
+    cuda::std::optional<VolumeCache<ScalarType, Dim, IsVectorProblem>> volume_cache;
 };
 
 template <typename ScalarType, bool IsVectorProblem> struct ElementXs<ScalarType, 2, IsVectorProblem> {
@@ -490,8 +494,10 @@ template <typename ScalarType, bool IsVectorProblem> class Scene<ScalarType, 2, 
             return {
                 BoundaryPoint<ScalarType, 2, IsVectorProblem>{
                     Eigen::Matrix<ScalarType, 2, 1>::Zero(), Eigen::Matrix<ScalarType, 2, 1>::Zero(), 0.5, 0.0,
-                    Dirichlet, 0.0},
-                0};
+                    Dirichlet, 0.0
+                },
+                0
+            };
         }
 
         num_intersections = std::min(num_intersections, buffer_size);
@@ -510,7 +516,8 @@ template <typename ScalarType, bool IsVectorProblem> class Scene<ScalarType, 2, 
             0.5,
             element.interpolate(element.boundary_value_a, element.boundary_value_b, interp),
             element.boundary_type,
-            element.interpolate(element.robin_alpha_a, element.robin_alpha_b, interp)};
+            element.interpolate(element.robin_alpha_a, element.robin_alpha_b, interp)
+        };
 
         return {result_point, num_intersections};
     }
@@ -556,7 +563,7 @@ template <typename ScalarType, bool IsVectorProblem> class Scene<ScalarType, 2, 
             unsigned int num_resampling_candidates; // the number of samples seen so far
 
             __device__ Reservoir(wob::randomState_t *random_state_ptr)
-                : y(), random_state_ptr(random_state_ptr), w_sum(0.0f), num_resampling_candidates(0){};
+                : y(), random_state_ptr(random_state_ptr), w_sum(0.0f), num_resampling_candidates(0) {};
             inline __device__ void
             update(const BoundaryPoint<ScalarType, 2, IsVectorProblem> &x_i, const ScalarType w_i) {
                 w_sum += w_i;
@@ -638,7 +645,7 @@ template <typename ScalarType, bool IsVectorProblem> class Scene<ScalarType, 2, 
     ScalarType total_boundary_area;
     ScalarType *boundary_value_cdf;
     ScalarType total_boundary_value;
-    thrust::optional<VolumeCache<ScalarType, 2, IsVectorProblem>> volume_cache;
+    cuda::std::optional<VolumeCache<ScalarType, 2, IsVectorProblem>> volume_cache;
 };
 
 // 3D
@@ -752,7 +759,8 @@ template <typename ScalarType, bool IsVectorProblem> class Scene<ScalarType, 3, 
                 element.boundary_value_a, element.boundary_value_b, element.boundary_value_c, unif2, unif3
             ),
             element.boundary_type,
-            element.interpolate(element.robin_alpha_a, element.robin_alpha_b, element.robin_alpha_c, unif2, unif3)};
+            element.interpolate(element.robin_alpha_a, element.robin_alpha_b, element.robin_alpha_c, unif2, unif3)
+        };
 
         return {result_point, total_boundary_area};
     };
@@ -794,8 +802,10 @@ template <typename ScalarType, bool IsVectorProblem> class Scene<ScalarType, 3, 
             return {
                 BoundaryPoint<ScalarType, 3, IsVectorProblem>{
                     Eigen::Matrix<ScalarType, 3, 1>::Zero(), Eigen::Matrix<ScalarType, 3, 1>::Zero(), 0.5, 0.0,
-                    Dirichlet, 0.0},
-                0};
+                    Dirichlet, 0.0
+                },
+                0
+            };
         }
 
         num_intersections = std::min(num_intersections, buffer_size);
@@ -815,7 +825,8 @@ template <typename ScalarType, bool IsVectorProblem> class Scene<ScalarType, 3, 
             0.5,
             element.interpolate(element.boundary_value_a, element.boundary_value_b, element.boundary_value_c, bc),
             element.boundary_type,
-            element.interpolate(element.robin_alpha_a, element.robin_alpha_b, element.robin_alpha_c, bc)};
+            element.interpolate(element.robin_alpha_a, element.robin_alpha_b, element.robin_alpha_c, bc)
+        };
 
         return {result_point, num_intersections};
     }
@@ -861,7 +872,7 @@ template <typename ScalarType, bool IsVectorProblem> class Scene<ScalarType, 3, 
             unsigned int num_resampling_candidates; // the number of samples seen so far
 
             __device__ Reservoir(wob::randomState_t *random_state_ptr)
-                : y(), random_state_ptr(random_state_ptr), w_sum(0.0f), num_resampling_candidates(0){};
+                : y(), random_state_ptr(random_state_ptr), w_sum(0.0f), num_resampling_candidates(0) {};
             inline __device__ void
             update(const BoundaryPoint<ScalarType, 3, IsVectorProblem> &x_i, const ScalarType w_i) {
                 w_sum += w_i;
@@ -912,7 +923,8 @@ template <typename ScalarType, bool IsVectorProblem> class Scene<ScalarType, 3, 
                 element.boundary_value_a, element.boundary_value_b, element.boundary_value_c, unif2, unif3
             ),
             element.boundary_type,
-            element.interpolate(element.robin_alpha_a, element.robin_alpha_b, element.robin_alpha_c, unif2, unif3)};
+            element.interpolate(element.robin_alpha_a, element.robin_alpha_b, element.robin_alpha_c, unif2, unif3)
+        };
 
         return {result_point, element.area() / pmf};
     }
@@ -933,7 +945,7 @@ template <typename ScalarType, bool IsVectorProblem> class Scene<ScalarType, 3, 
     ScalarType total_boundary_area;
     ScalarType *boundary_value_cdf;
     ScalarType total_boundary_value;
-    thrust::optional<VolumeCache<ScalarType, 3, IsVectorProblem>> volume_cache;
+    cuda::std::optional<VolumeCache<ScalarType, 3, IsVectorProblem>> volume_cache;
 };
 
 } // namespace wob

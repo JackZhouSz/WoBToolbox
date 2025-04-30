@@ -10,6 +10,6 @@
 [submodule "deps/json"]
 	path = deps/json
 	url = https://github.com/nlohmann/json.git
-[submodule "deps/thrust"]
-	path = deps/thrust
-	url = https://github.com/NVIDIA/thrust.git
+[submodule "deps/cccl"]
+	path = deps/cccl
+	url = https://github.com/NVIDIA/cccl

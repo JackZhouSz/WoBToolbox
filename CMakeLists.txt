@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.24)
 
 project(main LANGUAGES CXX)
 
@@ -39,9 +39,9 @@ else()
     endif()
 
     # If CUDA is not found, use the thrust library from the submodule instead.
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/deps/thrust)
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/deps/thrust/dependencies/cub)
-    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/deps/thrust/dependencies/libcudacxx/include)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/deps/cccl/thrust)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/deps/cccl/cub)
+    include_directories(${CMAKE_CURRENT_SOURCE_DIR}/deps/cccl/libcudacxx/include)
 endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/deps/eigen/)
