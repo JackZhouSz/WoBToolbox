@@ -18,6 +18,7 @@
 #include <cmath>
 #include <cuda/std/optional>
 #include <iostream>
+#include <optional>
 #include <thrust/pair.h>
 
 #include "lbvh.cuh"
@@ -326,7 +327,7 @@ template <typename ScalarType, unsigned int Dim, bool IsVectorProblem> struct Sc
         bvh;
     thrust::device_vector<ScalarType> area_cdf, boundary_value_cdf;
     ScalarType total_boundary_area, total_boundary_value;
-    cuda::std::optional<VolumeCacheHost<ScalarType, Dim, IsVectorProblem>> volume_cache;
+    std::optional<VolumeCacheHost<ScalarType, Dim, IsVectorProblem>> volume_cache;
 };
 
 template <typename ScalarType, unsigned int Dim, bool IsVectorProblem> class Scene {
